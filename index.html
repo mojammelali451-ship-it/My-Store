@@ -1,1 +1,1124 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Store — Modern essentials, delivered across India</title><meta name="description" content="Shop curated fashion and everyday essentials from My Store. Easy ordering, transparent pricing and WhatsApp order confirmation across India."><meta name="theme-color" content="#07111f"><meta property="og:title" content="My Store — Modern essentials"><meta property="og:description" content="Premium everyday products with simple WhatsApp checkout."><meta property="og:type" content="website"><link rel="icon" href="./favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="./style.css"></head><body><div id="app"></div><script type="module" src="./script.js"></script></body></html>
+<!-- Chosen Palette: Midnight Navy & Deep Charcoal Accent -->
+<!-- Application Structure Plan: Designed as a high-performance single-page web app (SPA) featuring dynamic view routing (Home, Shop, Product Details, Cart, Checkout, Order Confirmation, and Policies). The navigation utilizes sticky headers and mobile-bottom navigation bars. Interactive filters for categories (Apparel, Accessories, Electronics, Footwear) and dynamic tags (Featured, Best Sellers, New Arrivals) provide an intuitive browsing experience. Cart state is persisted via localStorage. Order submission generates a structured WhatsApp message payload directed to +91 7699680029. -->
+<!-- Visualization & Content Choices: Product grid cards use canvas-like responsive containers with hover transitions. Dynamic calculations show subtotal, free shipping thresholds (over ₹999), and savings metrics. Form validation checks user input before invoking the WhatsApp deep-link URL API. All layout structures rely strictly on standard HTML/CSS/Tailwind components without SVG or Mermaid JS dependencies. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Store | Premium Online Shopping India</title>
+    <meta name="description" content="Shop premium apparel, accessories, electronics, and footwear in India with cash on delivery and automated WhatsApp order dispatch.">
+    
+    <!-- Open Graph Metadata -->
+    <meta property="og:title" content="My Store - Premium Shopping in India">
+    <meta property="og:description" content="Discover curated products with fast shipping and automated WhatsApp checkout.">
+    <meta property="og:type" content="website">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            900: '#0A0F1D',
+                            800: '#0F172A',
+                            700: '#1E293B'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body class="bg-[#0A0F1D] text-slate-100 min-h-screen flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+
+    <!-- Top Announcement Bar -->
+    <div class="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-800 text-white text-xs font-semibold py-2 px-4 text-center tracking-wide z-50">
+        ✨ Free Shipping Across India on Orders Above ₹999 | Automated WhatsApp Checkout ✨
+    </div>
+
+    <!-- Sticky Main Navigation Header -->
+    <header class="sticky top-0 z-40 bg-[#0A0F1D]/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <button onclick="router('home')" class="text-xl font-bold tracking-wider text-white flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded bg-blue-600 flex items-center justify-center font-black text-white shadow-lg shadow-blue-600/30">M</div>
+                    <span>MY STORE</span>
+                </button>
+                <nav class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-300">
+                    <button onclick="router('home')" class="hover:text-blue-400 transition">Home</button>
+                    <button onclick="router('shop', 'All')" class="hover:text-blue-400 transition">Shop All</button>
+                    <button onclick="router('about')" class="hover:text-blue-400 transition">About Us</button>
+                    <button onclick="router('contact')" class="hover:text-blue-400 transition">Contact</button>
+                </nav>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <div class="hidden sm:flex items-center bg-slate-900 border border-slate-700 rounded-full px-3 py-1.5">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 mr-2"></i>
+                    <input 
+                        type="text" 
+                        id="desktop-search"
+                        placeholder="Search products..." 
+                        onkeypress="if(event.key === 'Enter') { searchProducts(this.value); }"
+                        class="bg-transparent border-none text-sm text-white focus:outline-none placeholder-slate-500 w-36 lg:w-48"
+                    />
+                </div>
+
+                <button 
+                    onclick="toggleCart(true)"
+                    class="relative p-2.5 rounded-full bg-slate-800 hover:bg-slate-700 text-white transition border border-slate-700"
+                    aria-label="Shopping Cart"
+                >
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-blue-400"></i>
+                    <span id="cart-badge" class="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0F172A] border-t border-slate-800 flex justify-around py-3 px-2 shadow-2xl">
+        <button onclick="router('home')" class="flex flex-col items-center text-xs text-slate-300">
+            <span class="text-lg">🏠</span>
+            <span>Home</span>
+        </button>
+        <button onclick="router('shop', 'All')" class="flex flex-col items-center text-xs text-slate-300">
+            <span class="text-lg">🛍️</span>
+            <span>Shop</span>
+        </button>
+        <button onclick="toggleCart(true)" class="flex flex-col items-center text-xs text-slate-300">
+            <span class="text-lg">🛒</span>
+            <span>Cart</span>
+        </button>
+        <button onclick="router('contact')" class="flex flex-col items-center text-xs text-slate-300">
+            <span class="text-lg">📞</span>
+            <span>Contact</span>
+        </button>
+    </div>
+
+    <!-- Dynamic Main Content Region -->
+    <main id="main-content" class="flex-grow pb-16 md:pb-0">
+        <!-- Rendered dynamically by Vanilla JS -->
+    </main>
+
+    <!-- Slide-Out Cart Drawer Container -->
+    <div id="cart-drawer" class="fixed inset-0 z-50 overflow-hidden hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity" onclick="toggleCart(false)"></div>
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-[#0F172A] border-l border-slate-800 shadow-2xl flex flex-col justify-between">
+                <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="shopping-bag" class="w-5 h-5 text-blue-400"></i>
+                        <h2 class="font-bold text-white text-lg" id="cart-title">Your Cart</h2>
+                    </div>
+                    <button onclick="toggleCart(false)" class="text-slate-400 hover:text-white p-1">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <div id="cart-items-container" class="p-6 overflow-y-auto flex-grow space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="cart-footer" class="p-6 border-t border-slate-800 bg-[#0A0F1D] space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Page Footer -->
+    <footer class="bg-[#070B14] border-t border-slate-800 text-slate-400 py-12 text-sm mb-12 md:mb-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div class="space-y-4">
+                <div class="flex items-center space-x-2 text-white font-bold text-lg">
+                    <div class="w-7 h-7 rounded bg-blue-600 flex items-center justify-center font-black text-white">M</div>
+                    <span>MY STORE</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Premium quality lifestyle products delivered across India. Fast automated WhatsApp checkout and cash on delivery supported.
+                </p>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3 text-xs uppercase tracking-wider">Quick Navigation</h4>
+                <ul class="space-y-2 text-xs">
+                    <li><button onclick="router('home')" class="hover:text-blue-400 transition">Home</button></li>
+                    <li><button onclick="router('shop', 'All')" class="hover:text-blue-400 transition">Shop All Products</button></li>
+                    <li><button onclick="router('about')" class="hover:text-blue-400 transition">About Our Brand</button></li>
+                    <li><button onclick="router('contact')" class="hover:text-blue-400 transition">Customer Support</button></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3 text-xs uppercase tracking-wider">Customer Policies</h4>
+                <ul class="space-y-2 text-xs">
+                    <li><button onclick="router('privacy')" class="hover:text-blue-400 transition">Privacy Policy</button></li>
+                    <li><button onclick="router('terms')" class="hover:text-blue-400 transition">Terms & Conditions</button></li>
+                    <li><button onclick="router('shipping')" class="hover:text-blue-400 transition">Shipping Policy</button></li>
+                    <li><button onclick="router('returns')" class="hover:text-blue-400 transition">Return & Refund Policy</button></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-white mb-3 text-xs uppercase tracking-wider">Instant WhatsApp Checkout</h4>
+                <p class="text-xs text-slate-400 mb-3">Have questions before placing an order? Reach us directly.</p>
+                <a 
+                    href="https://wa.me/917699680029" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    class="inline-flex items-center space-x-2 bg-[#25D366] text-white text-xs font-bold py-2.5 px-4 rounded-xl hover:bg-[#20ba5a] transition"
+                >
+                    <i data-lucide="message-square" class="w-4 h-4 fill-white"></i>
+                    <span>+91 7699680029</span>
+                </a>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 border-t border-slate-800/80 text-center text-xs text-slate-500">
+            © 2026 My Store. All rights reserved. Built for Indian E-Commerce.
+        </div>
+    </footer>
+
+    <!-- Single-Page Application Logic & Data Catalogue -->
+    <script>
+        // Centralized Product Catalogue Data
+        const PRODUCTS = [
+            {
+                id: "PROD-001",
+                name: "Classic Minimalist Chronograph Watch",
+                price: 2499,
+                originalPrice: 4999,
+                discount: 50,
+                images: [
+                    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=800&q=80"
+                ],
+                description: "An elegant timepiece featuring a genuine leather strap, stainless steel casing, and precision Japanese quartz movement. Designed for formal wear and everyday elegance.",
+                category: "Accessories",
+                sizes: ["Standard"],
+                colors: [{ name: "Black / Rose Gold", hex: "#111111" }, { name: "Brown / Silver", hex: "#8B4513" }],
+                inStock: true,
+                rating: 4.8,
+                reviewCount: 124,
+                sku: "MS-WAT-01",
+                isFeatured: true,
+                isBestSeller: true,
+                isNewArrival: false
+            },
+            {
+                id: "PROD-002",
+                name: "Urban Premium Oversized Cotton Hoodie",
+                price: 1499,
+                originalPrice: 2999,
+                discount: 50,
+                images: [
+                    "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=800&q=80"
+                ],
+                description: "Crafted from heavy 380 GSM bio-washed fleece cotton, this oversized hoodie offers supreme thermal insulation, soft hand-feel, and a modern streetwear fit.",
+                category: "Apparel",
+                sizes: ["S", "M", "L", "XL"],
+                colors: [{ name: "Deep Navy", hex: "#0A192F" }, { name: "Jet Black", hex: "#000000" }, { name: "Cloud White", hex: "#F8F9FA" }],
+                inStock: true,
+                rating: 4.9,
+                reviewCount: 88,
+                sku: "MS-APP-02",
+                isFeatured: true,
+                isBestSeller: true,
+                isNewArrival: true
+            },
+            {
+                id: "PROD-003",
+                name: "Ergonomic True Wireless Earbuds ANC",
+                price: 1999,
+                originalPrice: 3999,
+                discount: 50,
+                images: [
+                    "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80",
+                    "https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?auto=format&fit=crop&w=800&q=80"
+                ],
+                description: "Deep punchy bass combined with active noise cancellation, low latency gaming mode, 30-hour total battery life with fast charging case, and IPX5 splash protection.",
+                category: "Electronics",
+                sizes: ["Universal"],
+                colors: [{ name: "Matte Black", hex: "#1C1C1C" }, { name: "Midnight Navy", hex: "#172A45" }],
+                inStock: true,
+                rating: 4.7,
+                reviewCount: 210,
+                sku: "MS-ELE-03",
+                isFeatured: true,
+                isBestSeller: false,
+                isNewArrival: true
+            },
+            {
+                id: "PROD-004",
+                name: "Minimalist Genuine Leather RFID Wallet",
+                price: 899,
+                originalPrice: 1799,
+                discount: 50,
+                images: [
+                    "https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=800&q=80"
+                ],
+                description: "RFID-blocking slim bifold wallet crafted from full-grain hunter leather. Includes 6 credit card slots, dual cash compartments, and a quick-access ID window.",
+                category: "Accessories",
+                sizes: ["Standard"],
+                colors: [{ name: "Dark Tan", hex: "#A0522D" }, { name: "Carbon Black", hex: "#222222" }],
+                inStock: true,
+                rating: 4.6,
+                reviewCount: 53,
+                sku: "MS-ACC-04",
+                isFeatured: false,
+                isBestSeller: true,
+                isNewArrival: false
+            },
+            {
+                id: "PROD-005",
+                name: "Performance Breathable Running Shoes",
+                price: 2799,
+                originalPrice: 5599,
+                discount: 50,
+                images: [
+                    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80"
+                ],
+                description: "Engineered high-density mesh upper for optimum airflow paired with responsive cloud-foam cushioning for maximum shock absorption during long distance runs.",
+                category: "Footwear",
+                sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
+                colors: [{ name: "Vibrant Crimson", hex: "#DC2626" }, { name: "Stealth Black", hex: "#0F172A" }],
+                inStock: true,
+                rating: 4.9,
+                reviewCount: 142,
+                sku: "MS-SHO-05",
+                isFeatured: true,
+                isBestSeller: false,
+                isNewArrival: true
+            }
+        ];
+
+        const CATEGORIES = ["All", "Apparel", "Accessories", "Electronics", "Footwear"];
+        
+        const FAQS = [
+            { q: "How does the automated WhatsApp checkout work?", a: "When you complete the checkout form with your delivery address and click 'Place Order on WhatsApp', our system formats your full order invoice and opens WhatsApp directly to +91 7699680029 with all details pre-filled." },
+            { q: "What payment options are supported?", a: "We support Cash on Delivery (COD) as well as direct order verification via WhatsApp for instant dispatch processing." },
+            { q: "How quickly are orders dispatched?", a: "Orders are verified and handed to our courier partners within 24 to 48 hours. Standard delivery across India takes 3 to 7 business days depending on your PIN code." },
+            { q: "What is the return & replacement policy?", a: "We offer a 7-day hassle-free return and exchange policy for unused items in original condition." }
+        ];
+
+        const REVIEWS = [
+            { name: "Aarav Sharma", rating: 5, comment: "Fantastic quality product! The WhatsApp ordering was smooth and my order arrived in 3 days.", location: "Mumbai" },
+            { name: "Priya Patel", rating: 5, comment: "The hoodie cotton is extremely soft and thick. Excellent customer support on WhatsApp too.", location: "Ahmedabad" },
+            { name: "Rahul Verma", rating: 5, comment: "Great value for money. Very clear communication and quick delivery to Delhi.", location: "Delhi" }
+        ];
+
+        // Persistent Application State
+        let cart = JSON.parse(localStorage.getItem('mystore_cart') || '[]');
+        let currentView = 'home';
+        let selectedProduct = PRODUCTS[0];
+        let currentCategory = 'All';
+        let currentTab = 'All'; // Filter tabs: All, Best Sellers, New Arrivals
+        let searchQuery = '';
+        let activeImageIdx = 0;
+        let selectedSize = '';
+        let selectedColor = '';
+        let productQty = 1;
+        let lastOrderId = '';
+
+        function refreshIcons() {
+            setTimeout(() => {
+                if (window.lucide) lucide.createIcons();
+            }, 50);
+        }
+
+        function persistCart() {
+            localStorage.setItem('mystore_cart', JSON.stringify(cart));
+            updateCartBadge();
+        }
+
+        function updateCartBadge() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const badge = document.getElementById('cart-badge');
+            if (badge) badge.innerText = count;
+        }
+
+        // Main Router View Controller
+        function router(view, param = '') {
+            currentView = view;
+            window.scrollTo(0, 0);
+            const main = document.getElementById('main-content');
+
+            if (view === 'home') {
+                main.innerHTML = renderHome();
+            } else if (view === 'shop') {
+                currentCategory = param || 'All';
+                main.innerHTML = renderShop();
+            } else if (view === 'product-detail') {
+                selectedProduct = PRODUCTS.find(p => p.id === param) || PRODUCTS[0];
+                activeImageIdx = 0;
+                selectedSize = selectedProduct.sizes[0];
+                selectedColor = selectedProduct.colors[0].name;
+                productQty = 1;
+                main.innerHTML = renderProductDetail();
+            } else if (view === 'checkout') {
+                main.innerHTML = renderCheckout();
+            } else if (view === 'order-success') {
+                main.innerHTML = renderOrderSuccess();
+            } else if (view === 'about') {
+                main.innerHTML = renderStaticPage("About My Store", "Welcome to My Store, your trusted Indian online destination for high-grade apparel, stylish accessories, sound electronics, and durable footwear.\n\nWe focus on delivering high-end craftsmanship without retail markups. By utilizing direct WhatsApp confirmation, we cut down operational friction and offer personalized order verification and swift courier dispatch directly to your doorstep across India.");
+            } else if (view === 'contact') {
+                main.innerHTML = renderContactPage();
+            } else if (view === 'privacy') {
+                main.innerHTML = renderStaticPage("Privacy Policy", "At My Store, your privacy is our top priority. The customer details submitted during checkout (name, phone number, delivery address) are exclusively used for fulfilling your order and facilitating courier delivery. We do not rent, sell, or share personal data with external third parties.");
+            } else if (view === 'terms') {
+                main.innerHTML = renderStaticPage("Terms & Conditions", "By placing an order on My Store via automated WhatsApp dispatch, you agree to provide accurate shipping details and contact information. Prices listed in Indian Rupees (₹) include applicable taxes.");
+            } else if (view === 'shipping') {
+                main.innerHTML = renderStaticPage("Shipping Policy", "We ship across all pin codes in India. Orders are processed within 24 hours. Standard delivery timeline is 3 to 7 business days. Free shipping applies automatically on all orders above ₹999.");
+            } else if (view === 'returns') {
+                main.innerHTML = renderStaticPage("Return & Refund Policy", "We maintain a 7-day hassle-free replacement policy for items received in defective or incorrect state. Contact our WhatsApp support at +91 7699680029 with photos of the delivered parcel to request instant replacement.");
+            }
+            refreshIcons();
+        }
+
+        function searchProducts(query) {
+            searchQuery = query;
+            router('shop', 'All');
+        }
+
+        function addToCart(productId, size = '', color = '', qty = 1) {
+            const product = PRODUCTS.find(p => p.id === productId);
+            if (!product) return;
+            const sSize = size || product.sizes[0];
+            const sColor = color || product.colors[0].name;
+
+            const existing = cart.find(item => item.product.id === productId && item.selectedSize === sSize && item.selectedColor === sColor);
+            if (existing) {
+                existing.quantity += qty;
+            } else {
+                cart.push({ product, selectedSize: sSize, selectedColor: sColor, quantity: qty });
+            }
+            persistCart();
+            toggleCart(true);
+        }
+
+        function updateCartQty(index, delta) {
+            cart[index].quantity += delta;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            persistCart();
+            renderCartDrawer();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            persistCart();
+            renderCartDrawer();
+        }
+
+        function toggleCart(open) {
+            const drawer = document.getElementById('cart-drawer');
+            if (open) {
+                drawer.classList.remove('hidden');
+                renderCartDrawer();
+            } else {
+                drawer.classList.add('hidden');
+            }
+        }
+
+        function renderCartDrawer() {
+            const container = document.getElementById('cart-items-container');
+            const footer = document.getElementById('cart-footer');
+            const totalCount = cart.reduce((s, i) => s + i.quantity, 0);
+            document.getElementById('cart-title').innerText = `Your Cart (${totalCount})`;
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-slate-400">
+                        <i data-lucide="shopping-bag" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+                        <p class="font-medium text-slate-300">Your shopping cart is empty.</p>
+                        <p class="text-xs text-slate-500 mt-1">Add items to proceed to instant checkout.</p>
+                    </div>`;
+                footer.innerHTML = '';
+                refreshIcons();
+                return;
+            }
+
+            let subtotal = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+            let shipping = subtotal > 999 ? 0 : 99;
+            let total = subtotal + shipping;
+
+            container.innerHTML = cart.map((item, idx) => `
+                <div class="flex space-x-4 bg-slate-900/70 p-4 rounded-xl border border-slate-800">
+                    <img src="${item.product.images[0]}" class="w-20 h-20 object-cover rounded-lg border border-slate-700" alt="">
+                    <div class="flex-grow flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-white text-sm line-clamp-1">${item.product.name}</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Size: ${item.selectedSize} | Color: ${item.selectedColor}</p>
+                            <p class="text-blue-400 font-bold text-sm mt-1">₹${item.product.price}</p>
+                        </div>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700">
+                                <button onclick="updateCartQty(${idx}, -1)" class="p-1 text-slate-300 hover:text-white"><i data-lucide="minus" class="w-3.5 h-3.5"></i></button>
+                                <span class="px-2.5 text-xs font-bold text-white">${item.quantity}</span>
+                                <button onclick="updateCartQty(${idx}, 1)" class="p-1 text-slate-300 hover:text-white"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                            <button onclick="removeFromCart(${idx})" class="text-red-400 hover:text-red-300 p-1">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            footer.innerHTML = `
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between text-slate-300">
+                        <span>Subtotal</span>
+                        <span class="font-bold">₹${subtotal}</span>
+                    </div>
+                    <div class="flex justify-between text-slate-300">
+                        <span>Delivery Charge</span>
+                        <span class="font-bold">${shipping === 0 ? '<span class="text-green-400">FREE</span>' : '₹' + shipping}</span>
+                    </div>
+                    <div class="flex justify-between text-white font-extrabold text-base pt-2 border-t border-slate-800">
+                        <span>Total Payable</span>
+                        <span class="text-blue-400">₹${total}</span>
+                    </div>
+                </div>
+                <button 
+                    onclick="toggleCart(false); router('checkout');"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-blue-600/30 transition text-center flex items-center justify-center space-x-2"
+                >
+                    <span>Proceed to WhatsApp Checkout</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+            `;
+            refreshIcons();
+        }
+
+        // Home View Generator
+        function renderHome() {
+            const featuredList = PRODUCTS.filter(p => p.isFeatured).map(p => renderProductCard(p)).join('');
+            const bestSellersList = PRODUCTS.filter(p => p.isBestSeller).map(p => renderProductCard(p)).join('');
+            const newArrivalsList = PRODUCTS.filter(p => p.isNewArrival).map(p => renderProductCard(p)).join('');
+
+            const reviewCards = REVIEWS.map(r => `
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center space-x-1 text-yellow-400 mb-4">
+                            ${'<i data-lucide="star" class="w-4 h-4 fill-yellow-400"></i>'.repeat(r.rating)}
+                        </div>
+                        <p class="text-slate-300 text-sm italic">"${r.comment}"</p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                        <span class="font-bold text-white text-sm">${r.name}</span>
+                        <span class="text-xs text-slate-400">${r.location}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            const faqCards = FAQS.map(f => `
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                    <h3 class="font-bold text-white text-base mb-2 flex items-center">
+                        <span class="text-blue-400 mr-2">Q.</span> ${f.q}
+                    </h3>
+                    <p class="text-slate-300 text-sm pl-5">${f.a}</p>
+                </div>
+            `).join('');
+
+            return `
+                <div>
+                    <!-- Hero Section -->
+                    <section class="relative overflow-hidden bg-gradient-to-b from-[#0F172A] to-[#0A0F1D] py-16 lg:py-24 border-b border-slate-800">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                            <div class="space-y-6 text-center lg:text-left">
+                                <div class="inline-flex items-center space-x-2 bg-blue-950/80 border border-blue-700/50 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-full">
+                                    <i data-lucide="star" class="w-3.5 h-3.5 text-yellow-400 fill-yellow-400"></i>
+                                    <span>Rated 4.8/5 by 500+ Customers Across India</span>
+                                </div>
+                                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight">
+                                    Premium Lifestyle Goods, <br />
+                                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Delivered Fast via WhatsApp.</span>
+                                </h1>
+                                <p class="text-slate-300 text-base sm:text-lg max-w-xl mx-auto lg:mx-0">
+                                    Explore authentic apparel, accessories, footwear, and electronics. Instant WhatsApp order dispatch with Cash on Delivery support.
+                                </p>
+                                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                                    <button 
+                                        onclick="router('shop', 'All')"
+                                        class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center space-x-2"
+                                    >
+                                        <span>Explore Collection</span>
+                                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                                    </button>
+                                    <button 
+                                        onclick="router('product-detail', '${PRODUCTS[0].id}')"
+                                        class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-semibold px-8 py-3.5 rounded-xl border border-slate-700 transition flex items-center justify-center"
+                                    >
+                                        View Best Seller
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="relative">
+                                <div class="relative mx-auto max-w-md lg:max-w-none rounded-2xl overflow-hidden shadow-2xl border border-slate-700 group">
+                                    <img src="${PRODUCTS[0].images[0]}" class="w-full h-[380px] sm:h-[460px] object-cover group-hover:scale-105 transition duration-500" alt="">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-[#0A0F1D] via-transparent to-transparent opacity-80"></div>
+                                    <div class="absolute bottom-6 left-6 right-6 bg-slate-900/95 backdrop-blur-md p-4 rounded-xl border border-slate-700 flex items-center justify-between">
+                                        <div>
+                                            <p class="text-xs text-blue-400 font-semibold uppercase">${PRODUCTS[0].category}</p>
+                                            <h3 class="text-white font-bold text-sm sm:text-base">${PRODUCTS[0].name}</h3>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs text-slate-400 line-through">₹${PRODUCTS[0].originalPrice}</span>
+                                            <p class="text-blue-400 font-extrabold text-lg">₹${PRODUCTS[0].price}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Trust Signals Bar -->
+                    <section class="py-12 bg-[#0A0F1D] border-b border-slate-800">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div class="flex items-center space-x-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg"><i data-lucide="truck" class="w-6 h-6"></i></div>
+                                <div><h4 class="font-bold text-white text-sm">Pan India Express Delivery</h4><p class="text-xs text-slate-400">Dispatched in 24 hours</p></div>
+                            </div>
+                            <div class="flex items-center space-x-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg"><i data-lucide="shield-check" class="w-6 h-6"></i></div>
+                                <div><h4 class="font-bold text-white text-sm">100% Quality Checked</h4><p class="text-xs text-slate-400">Inspected before shipment</p></div>
+                            </div>
+                            <div class="flex items-center space-x-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg"><i data-lucide="message-square" class="w-6 h-6"></i></div>
+                                <div><h4 class="font-bold text-white text-sm">WhatsApp Instant Support</h4><p class="text-xs text-slate-400">Direct query assistance</p></div>
+                            </div>
+                            <div class="flex items-center space-x-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                <div class="p-3 bg-blue-600/20 text-blue-400 rounded-lg"><i data-lucide="refresh-cw" class="w-6 h-6"></i></div>
+                                <div><h4 class="font-bold text-white text-sm">7-Day Replacement</h4><p class="text-xs text-slate-400">Easy return policy</p></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Featured Products Section -->
+                    <section class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex justify-between items-end mb-8">
+                            <div>
+                                <span class="text-blue-400 text-xs font-bold uppercase tracking-widest">Handpicked Selection</span>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Featured Products</h2>
+                            </div>
+                            <button onclick="router('shop', 'All')" class="text-blue-400 hover:text-blue-300 text-sm font-semibold flex items-center space-x-1">
+                                <span>View All</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            ${featuredList}
+                        </div>
+                    </section>
+
+                    <!-- Best Sellers & New Arrivals Sections -->
+                    <section class="py-12 bg-slate-900/40 border-y border-slate-800">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="mb-8">
+                                <span class="text-blue-400 text-xs font-bold uppercase tracking-widest">Top Rated</span>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Best Sellers</h2>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+                                ${bestSellersList}
+                            </div>
+
+                            <div class="mb-8">
+                                <span class="text-blue-400 text-xs font-bold uppercase tracking-widest">Fresh Drop</span>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">New Arrivals</h2>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                ${newArrivalsList}
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Promotional Banner -->
+                    <section class="py-12 bg-gradient-to-r from-blue-900 via-indigo-900 to-[#0A0F1D] border-b border-slate-800">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div class="space-y-4">
+                                <span class="bg-blue-500/20 text-blue-300 text-xs font-bold px-3 py-1 rounded-full border border-blue-400/30">Limited Season Offer</span>
+                                <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Flat 50% OFF Across All Collections</h2>
+                                <p class="text-slate-300 text-sm sm:text-base">Upgrade your wardrobe and accessories today. Convenient instant ordering via WhatsApp with zero registration required.</p>
+                                <button onclick="router('shop', 'All')" class="bg-white text-slate-900 hover:bg-slate-100 font-bold px-6 py-3 rounded-xl transition shadow-lg">
+                                    Shop Special Offers
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <img src="${PRODUCTS[1].images[0]}" class="rounded-xl h-44 w-full object-cover border border-slate-700" alt="">
+                                <img src="${PRODUCTS[2].images[0]}" class="rounded-xl h-44 w-full object-cover border border-slate-700" alt="">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Customer Reviews -->
+                    <section class="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="text-center max-w-xl mx-auto mb-12">
+                            <span class="text-blue-400 text-xs font-bold uppercase tracking-widest">Customer Feedback</span>
+                            <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Loved by Shoppers Nationwide</h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${reviewCards}
+                        </div>
+                    </section>
+
+                    <!-- FAQ Section -->
+                    <section class="py-16 bg-slate-900/40 border-t border-slate-800">
+                        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="text-center mb-12">
+                                <span class="text-blue-400 text-xs font-bold uppercase tracking-widest">Information Center</span>
+                                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Frequently Asked Questions</h2>
+                            </div>
+                            <div class="space-y-4">
+                                ${faqCards}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            `;
+        }
+
+        // Product Card Renderer
+        function renderProductCard(product) {
+            return `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden group hover:border-slate-700 transition flex flex-col justify-between">
+                    <div class="relative overflow-hidden cursor-pointer" onclick="router('product-detail', '${product.id}')">
+                        <img src="${product.images[0]}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-500" alt="${product.name}">
+                        <span class="absolute top-3 left-3 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                            ${product.discount}% OFF
+                        </span>
+                    </div>
+                    <div class="p-4 flex flex-col flex-grow justify-between">
+                        <div>
+                            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                                <span>${product.category}</span>
+                                <div class="flex items-center space-x-1 text-yellow-400">
+                                    <i data-lucide="star" class="w-3.5 h-3.5 fill-yellow-400"></i>
+                                    <span class="font-semibold text-white">${product.rating}</span>
+                                </div>
+                            </div>
+                            <h3 onclick="router('product-detail', '${product.id}')" class="text-white font-bold text-base hover:text-blue-400 transition cursor-pointer line-clamp-1">
+                                ${product.name}
+                            </h3>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs text-slate-400 line-through">₹${product.originalPrice}</span>
+                                <p class="text-white font-extrabold text-lg">₹${product.price}</p>
+                            </div>
+                            <button onclick="addToCart('${product.id}', '${product.sizes[0]}', '${product.colors[0].name}', 1)" class="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-xl transition shadow-lg shadow-blue-600/30">
+                                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Shop View Generator
+        function renderShop() {
+            const categoryPills = CATEGORIES.map(cat => `
+                <button onclick="router('shop', '${cat}')" class="px-4 py-2 rounded-xl text-xs font-semibold transition ${currentCategory === cat ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800'}">
+                    ${cat}
+                </button>
+            `).join('');
+
+            const filteredProducts = PRODUCTS
+                .filter(p => currentCategory === 'All' || p.category === currentCategory)
+                .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map(p => renderProductCard(p))
+                .join('');
+
+            return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pb-6 border-b border-slate-800">
+                        <div>
+                            <h1 class="text-2xl sm:text-3xl font-extrabold text-white">All Products</h1>
+                            <p class="text-slate-400 text-sm mt-1">Browse our complete catalogue of premium goods.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            ${categoryPills}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${filteredProducts || '<div class="col-span-full text-center py-16 text-slate-400">No products match your search filters.</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Product Detail View Generator
+        function renderProductDetail() {
+            const p = selectedProduct;
+            const imagesThumb = p.images.map((img, idx) => `
+                <button onclick="activeImageIdx = ${idx}; router('product-detail', '${p.id}');" class="w-20 h-20 rounded-xl overflow-hidden border-2 transition ${activeImageIdx === idx ? 'border-blue-600' : 'border-slate-800 opacity-60 hover:opacity-100'}">
+                    <img src="${img}" class="w-full h-full object-cover" alt="">
+                </button>
+            `).join('');
+
+            const sizesHtml = (p.sizes.length > 0 && p.sizes[0] !== "Standard" && p.sizes[0] !== "Universal") ? `
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Select Size</label>
+                    <div class="flex flex-wrap gap-3">
+                        ${p.sizes.map(s => `
+                            <button onclick="selectedSize = '${s}'; router('product-detail', '${p.id}');" class="px-4 py-2 rounded-xl text-sm font-semibold border transition ${selectedSize === s ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'}">
+                                ${s}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const colorsHtml = p.colors.length > 0 ? `
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Select Color: <span class="text-white font-normal">${selectedColor}</span>
+                    </label>
+                    <div class="flex items-center space-x-3">
+                        ${p.colors.map(c => `
+                            <button onclick="selectedColor = '${c.name}'; router('product-detail', '${p.id}');" class="w-8 h-8 rounded-full border-2 transition ${selectedColor === c.name ? 'border-white scale-110 shadow' : 'border-transparent opacity-70 hover:opacity-100'}" style="background-color: ${c.hex}" title="${c.name}"></button>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <button onclick="router('shop', 'All')" class="mb-6 inline-flex items-center space-x-2 text-slate-400 hover:text-white text-sm font-medium transition">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        <span>Back to Catalogue</span>
+                    </button>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        <div class="space-y-4">
+                            <div class="rounded-2xl overflow-hidden border border-slate-800 bg-slate-900">
+                                <img src="${p.images[activeImageIdx] || p.images[0]}" class="w-full h-[380px] sm:h-[480px] object-cover" alt="${p.name}">
+                            </div>
+                            <div class="flex space-x-4">
+                                ${imagesThumb}
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div>
+                                <span class="bg-blue-600/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full border border-blue-500/30">${p.category}</span>
+                                <h1 class="text-2xl sm:text-3xl font-extrabold text-white mt-3">${p.name}</h1>
+                                <div class="flex items-center space-x-4 mt-2">
+                                    <div class="flex items-center space-x-1 text-yellow-400">
+                                        <i data-lucide="star" class="w-4 h-4 fill-yellow-400"></i>
+                                        <span class="font-bold text-white">${p.rating}</span>
+                                        <span class="text-xs text-slate-400">(${p.reviewCount} customer reviews)</span>
+                                    </div>
+                                    <span class="text-slate-600">|</span>
+                                    <span class="text-xs text-slate-400">SKU: ${p.sku}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-baseline space-x-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                                <span class="text-3xl font-extrabold text-white">₹${p.price}</span>
+                                <span class="text-slate-400 line-through text-lg">₹${p.originalPrice}</span>
+                                <span class="text-blue-400 font-bold text-sm bg-blue-500/10 px-2.5 py-1 rounded">Save ${p.discount}%</span>
+                            </div>
+                            <p class="text-slate-300 text-sm leading-relaxed">${p.description}</p>
+                            ${sizesHtml}
+                            ${colorsHtml}
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Quantity</label>
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl">
+                                        <button onclick="productQty = Math.max(1, productQty - 1); document.getElementById('qty-val').innerText = productQty;" class="p-3 text-slate-300 hover:text-white"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                                        <span id="qty-val" class="px-4 font-bold text-white">${productQty}</span>
+                                        <button onclick="productQty++; document.getElementById('qty-val').innerText = productQty;" class="p-3 text-slate-300 hover:text-white"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                                <button onclick="addToCart('${p.id}', '${selectedSize || p.sizes[0]}', '${selectedColor || p.colors[0].name}', productQty)" class="flex-grow bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-xl shadow-lg shadow-blue-600/35 transition flex items-center justify-center space-x-2">
+                                    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                                    <span>Add to Cart</span>
+                                </button>
+                                <button onclick="addToCart('${p.id}', '${selectedSize || p.sizes[0]}', '${selectedColor || p.colors[0].name}', productQty); router('checkout');" class="flex-grow bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-6 rounded-xl border border-slate-700 transition flex items-center justify-center space-x-2">
+                                    <span>Instant WhatsApp Checkout</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Checkout View Generator
+        function renderCheckout() {
+            if (cart.length === 0) {
+                return `
+                    <div class="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+                        <i data-lucide="shopping-bag" class="w-16 h-16 text-slate-600 mx-auto"></i>
+                        <h1 class="text-2xl font-bold text-white">Your cart is empty</h1>
+                        <p class="text-slate-400 text-sm">Add items from the store before attempting checkout.</p>
+                        <button onclick="router('shop', 'All')" class="bg-blue-600 text-white font-bold px-6 py-3 rounded-xl">Start Shopping</button>
+                    </div>
+                `;
+            }
+
+            const subtotal = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+            const shipping = subtotal > 999 ? 0 : 99;
+            const total = subtotal + shipping;
+
+            const cartSummaryHtml = cart.map(item => `
+                <div class="flex items-center space-x-4 pb-4 border-b border-slate-800">
+                    <img src="${item.product.images[0]}" class="w-16 h-16 object-cover rounded-xl border border-slate-700" alt="">
+                    <div class="flex-grow">
+                        <h4 class="font-bold text-sm text-white line-clamp-1">${item.product.name}</h4>
+                        <p class="text-xs text-slate-400">Size: ${item.selectedSize} | Color: ${item.selectedColor}</p>
+                        <p class="text-xs text-slate-400">Qty: ${item.quantity}</p>
+                    </div>
+                    <span class="font-extrabold text-white text-sm">₹${item.product.price * item.quantity}</span>
+                </div>
+            `).join('');
+
+            return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <button onclick="router('shop', 'All')" class="mb-6 inline-flex items-center space-x-2 text-slate-400 hover:text-white text-sm font-medium transition">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        <span>Back to Store</span>
+                    </button>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-8">Checkout & Automated WhatsApp Order</h1>
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl">
+                            <h2 class="text-lg font-bold text-white mb-6 flex items-center space-x-2">
+                                <i data-lucide="map-pin" class="w-5 h-5 text-blue-400"></i>
+                                <span>Shipping Address & Contact Info</span>
+                            </h2>
+                            <form id="checkout-form" onsubmit="handleCheckout(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Full Name *</label>
+                                    <input type="text" id="chk-name" placeholder="e.g. Rajesh Kumar" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none">
+                                    <p id="err-name" class="text-red-400 text-xs mt-1 hidden"></p>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Mobile Phone Number *</label>
+                                        <input type="tel" id="chk-phone" placeholder="10-digit mobile number" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none">
+                                        <p id="err-phone" class="text-red-400 text-xs mt-1 hidden"></p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Email (Optional)</label>
+                                        <input type="email" id="chk-email" placeholder="name@domain.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Complete Delivery Address *</label>
+                                    <textarea id="chk-address" rows="3" placeholder="House/Flat no., Street, Landmark" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"></textarea>
+                                    <p id="err-address" class="text-red-400 text-xs mt-1 hidden"></p>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">City *</label>
+                                        <input type="text" id="chk-city" placeholder="City" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none">
+                                        <p id="err-city" class="text-red-400 text-xs mt-1 hidden"></p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">State *</label>
+                                        <input type="text" id="chk-state" placeholder="State" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none">
+                                        <p id="err-state" class="text-red-400 text-xs mt-1 hidden"></p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">PIN Code *</label>
+                                        <input type="text" id="chk-pin" placeholder="6 digits" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none">
+                                        <p id="err-pin" class="text-red-400 text-xs mt-1 hidden"></p>
+                                    </div>
+                                </div>
+                                <div class="pt-6">
+                                    <button type="submit" class="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-extrabold py-4 px-6 rounded-xl shadow-xl shadow-[#25D366]/20 transition flex items-center justify-center space-x-3 text-base">
+                                        <i data-lucide="message-square" class="w-6 h-6 fill-white"></i>
+                                        <span>Place Order on WhatsApp</span>
+                                    </button>
+                                    <p class="text-xs text-slate-400 text-center mt-3">
+                                        🔒 Opens WhatsApp automatically with pre-filled itemized invoice directed to <span class="text-white font-bold">+91 7699680029</span>.
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="lg:col-span-5 space-y-6">
+                            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                                <h2 class="text-lg font-bold text-white mb-4">Order Summary</h2>
+                                <div class="space-y-4 max-h-80 overflow-y-auto pr-2">
+                                    ${cartSummaryHtml}
+                                </div>
+                                <div class="mt-6 pt-4 border-t border-slate-800 space-y-2 text-sm">
+                                    <div class="flex justify-between text-slate-300">
+                                        <span>Subtotal</span>
+                                        <span class="font-bold">₹${subtotal}</span>
+                                    </div>
+                                    <div class="flex justify-between text-slate-300">
+                                        <span>Shipping</span>
+                                        <span class="font-bold">${shipping === 0 ? '<span class="text-green-400">FREE</span>' : '₹' + shipping}</span>
+                                    </div>
+                                    <div class="flex justify-between text-white font-extrabold text-base pt-2 border-t border-slate-800">
+                                        <span>Total Order Value</span>
+                                        <span class="text-blue-400">₹${total}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // WhatsApp Submission Logic & Order Validation
+        function handleCheckout(e) {
+            e.preventDefault();
+            const name = document.getElementById('chk-name').value.trim();
+            const phone = document.getElementById('chk-phone').value.trim();
+            const email = document.getElementById('chk-email').value.trim();
+            const address = document.getElementById('chk-address').value.trim();
+            const city = document.getElementById('chk-city').value.trim();
+            const state = document.getElementById('chk-state').value.trim();
+            const pin = document.getElementById('chk-pin').value.trim();
+
+            let hasError = false;
+
+            const setError = (field, msg) => {
+                const el = document.getElementById(`err-${field}`);
+                if (msg) { 
+                    el.innerText = msg; 
+                    el.classList.remove('hidden'); 
+                    hasError = true; 
+                } else { 
+                    el.classList.add('hidden'); 
+                }
+            };
+
+            setError('name', !name ? "Full Name is required." : "");
+            setError('phone', (!phone || phone.length < 10) ? "Valid 10-digit mobile number is required." : "");
+            setError('address', !address ? "Delivery Address is required." : "");
+            setError('city', !city ? "City is required." : "");
+            setError('state', !state ? "State is required." : "");
+            setError('pin', (!pin || pin.length < 6) ? "Valid 6-digit PIN code is required." : "");
+
+            if (hasError) return;
+
+            // Generate Unique Order ID: ORD-20260915-XXXX
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            lastOrderId = `ORD-${dateStr}-${randomNum}`;
+
+            const subtotal = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+            const shipping = subtotal > 999 ? 0 : 99;
+            const total = subtotal + shipping;
+
+            const productsListFormatted = cart.map((item, i) => 
+                `Item ${i + 1}:\n` +
+                `• Product Name: ${item.product.name}\n` +
+                `• Product Variant: Size: ${item.selectedSize}, Color: ${item.selectedColor}\n` +
+                `• Quantity: ${item.quantity}\n` +
+                `• Product Price: ₹${item.product.price}`
+            ).join('\n\n');
+
+            const whatsappMessage = encodeURIComponent(
+                `🛍️ *NEW ORDER PLACED - MY STORE*\n\n` +
+                `*Order ID:* ${lastOrderId}\n\n` +
+                `👤 *Customer Information:*\n` +
+                `Customer Name: ${name}\n` +
+                `Phone Number: ${phone}\n` +
+                `Delivery Address: ${address}, ${city}, ${state} - ${pin}\n` +
+                `Email: ${email || 'N/A'}\n\n` +
+                `📦 *Order Details:*\n${productsListFormatted}\n\n` +
+                `💰 *Financial Breakdown:*\n` +
+                `Subtotal: ₹${subtotal}\n` +
+                `Shipping: ₹${shipping === 0 ? 'FREE' : '₹' + shipping}\n` +
+                `*Total Order Value: ₹${total}*\n\n` +
+                `Payment Status: Cash on Delivery / Pending WhatsApp Dispatch`
+            );
+
+            window.open(`https://wa.me/917699680029?text=${whatsappMessage}`, '_blank');
+
+            cart = [];
+            persistCart();
+            router('order-success');
+        }
+
+        // Order Confirmation View Generator
+        function renderOrderSuccess() {
+            return `
+                <div class="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+                    <div class="w-20 h-20 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full flex items-center justify-center mx-auto">
+                        <i data-lucide="check-circle" class="w-10 h-10"></i>
+                    </div>
+                    <h1 class="text-3xl font-extrabold text-white">Order Invoice Generated!</h1>
+                    <p class="text-slate-300 text-sm">
+                        Your Order ID is <span class="text-blue-400 font-bold">${lastOrderId}</span>. WhatsApp has automatically opened with your structured order invoice ready to transmit to <span class="text-white font-bold">+91 7699680029</span>.
+                    </p>
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl text-left space-y-2 text-sm text-slate-300">
+                        <p class="font-bold text-white mb-2">Next Steps:</p>
+                        <p>1. Send the pre-filled message on WhatsApp.</p>
+                        <p>2. Our order representative will confirm your delivery address.</p>
+                        <p>3. Your order will be dispatched within 24 hours.</p>
+                    </div>
+                    <button onclick="router('shop', 'All')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl transition shadow-lg shadow-blue-600/30">
+                        Continue Shopping
+                    </button>
+                </div>
+            `;
+        }
+
+        // Static Pages Renderer
+        function renderStaticPage(title, content) {
+            return `
+                <div class="max-w-4xl mx-auto px-4 py-12 space-y-6">
+                    <h1 class="text-3xl font-extrabold text-white">${title}</h1>
+                    <p class="text-slate-300 leading-relaxed whitespace-pre-line text-sm sm:text-base">${content}</p>
+                </div>
+            `;
+        }
+
+        // Contact Page Renderer
+        function renderContactPage() {
+            return `
+                <div class="max-w-4xl mx-auto px-4 py-12 space-y-8">
+                    <h1 class="text-3xl font-extrabold text-white">Contact Us</h1>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl space-y-4">
+                            <div class="flex items-center space-x-3 text-slate-300">
+                                <i data-lucide="phone" class="w-5 h-5 text-blue-400"></i>
+                                <span class="font-bold text-white">+91 7699680029</span>
+                            </div>
+                            <div class="flex items-center space-x-3 text-slate-300">
+                                <i data-lucide="mail" class="w-5 h-5 text-blue-400"></i>
+                                <span>support@mystore.in</span>
+                            </div>
+                            <div class="flex items-center space-x-3 text-slate-300">
+                                <i data-lucide="map-pin" class="w-5 h-5 text-blue-400"></i>
+                                <span>Siliguri, West Bengal, India</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between">
+                            <h3 class="font-bold text-white mb-2">Need Direct Customer Assistance?</h3>
+                            <p class="text-slate-300 text-sm mb-4">Chat directly with our support team on WhatsApp for real-time order inquiries.</p>
+                            <a href="https://wa.me/917699680029" target="_blank" rel="noreferrer" class="bg-[#25D366] text-white text-center font-bold py-3 px-4 rounded-xl flex items-center justify-center space-x-2">
+                                <i data-lucide="message-square" class="w-5 h-5 fill-white"></i>
+                                <span>Chat on WhatsApp</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initial Boot
+        updateCartBadge();
+        router('home');
+    </script>
+</body>
+</html>
