@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mojammelali451-ship-it.github.io/My-Store/sitemap.xml
